@@ -26,6 +26,9 @@
 				<source>Folder permissions</source>
 			</trans-unit>
 
+            <trans-unit id="extmng.use_multi_domain_config">
+                <source>Use Multidomain-Config f. redirect_urls. (domainname1,url1|domainname2,url2)</source>
+            </trans-unit>
 			<trans-unit id="extmng.login_redirect_url">
 				<source>Instead of throwing a "Authentication required!" message redirect the user to this url (optional variable = ###REQUEST_URI###)</source>
 			</trans-unit>

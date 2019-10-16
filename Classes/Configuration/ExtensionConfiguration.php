@@ -34,12 +34,16 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class ExtensionConfiguration
 {
     private static $isInitialized = false;
+    private static $useMultidomainConfig = false;
     private static $loginRedirectUrl = '';
     private static $noAccessRedirectUrl = '';
     private static $forceDownload = false;
     private static $forceDownloadForExt = '';
     private static $trackDownloads = false;
     private static $resumableDownload = true;
+
+    private static $loginRedirectUrlMapping = [];
+    private static $noAccessRedirectUrlMapping = [];
 
     private static function init()
     {
@@ -51,8 +55,24 @@ class ExtensionConfiguration
                 // Fallback for 8LTS
                 $extensionConfig = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['fal_securedownload']);
             }
-            self::$loginRedirectUrl = $extensionConfig['login_redirect_url'];
-            self::$noAccessRedirectUrl = $extensionConfig['no_access_redirect_url'];
+            self::$useMultidomainConfig = (bool)$extensionConfig['use_multidomain_config'];
+            if (self::$useMultidomainConfig){
+                $rawLoginRedirectString=$extensionConfig['login_redirect_url'];
+                $domainLoginRedirectConfigs=explode('|',$rawLoginRedirectString);
+                foreach ($domainLoginRedirectConfigs as $config){
+                    [$domain, $url] = explode(',', $config);
+                    self::$loginRedirectUrlMapping[$domain]=$url;
+                }
+                $rawNoAccessRedirectString=$extensionConfig['no_access_redirect_url'];
+                $domainNoAccessRedirectConfigs=explode('|',$rawNoAccessRedirectString);
+                foreach ($domainNoAccessRedirectConfigs as $config){
+                    [$domain, $url] = explode(',', $config);
+                    self::$noAccessRedirectUrlMapping[$domain]=$url;
+                }
+            }else{
+                self::$loginRedirectUrl = $extensionConfig['login_redirect_url'];
+                self::$noAccessRedirectUrl = $extensionConfig['no_access_redirect_url'];
+            }
             self::$forceDownload = (bool)$extensionConfig['force_download'];
             self::$forceDownloadForExt = $extensionConfig['force_download_for_ext'];
             self::$trackDownloads = (bool)$extensionConfig['track_downloads'];
@@ -61,11 +81,23 @@ class ExtensionConfiguration
     }
 
     /**
+     * @return bool
+     */
+    public static function useMultidomainConfig()
+    {
+        self::init();
+        return self::$useMultidomainConfig;
+    }
+    /**
      * @return string
      */
     public static function loginRedirectUrl()
     {
         self::init();
+        if (self::$useMultidomainConfig){
+            $currentHost = (string)GeneralUtility::getIndpEnv('HTTP_HOST');
+            return self::$loginRedirectUrlMapping[$currentHost] ?? '';
+        }
         return self::$loginRedirectUrl;
     }
 
@@ -75,6 +107,10 @@ class ExtensionConfiguration
     public static function noAccessRedirectUrl()
     {
         self::init();
+        if (self::$useMultidomainConfig){
+            $currentHost = (string)GeneralUtility::getIndpEnv('HTTP_HOST');
+            return self::$noAccessRedirectUrlMapping[$currentHost] ?? '';
+        }
         return self::$noAccessRedirectUrl;
     }
 
